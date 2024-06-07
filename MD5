@@ -1,0 +1,15 @@
+9d3132e11bf23af1c4d02e4ff6ecbef8 *DESCRIPTION
+9e2239963c5ed90a945abf52f15cc7d6 *NAMESPACE
+57b38a3bcd7571012f94c4c92bb85d3a *R/MetaHD.R
+f6d666936b08286089aff095503e8237 *R/RcppExports.R
+d2f54b103feeae8e3380f71c68a4b037 *data/realdata.rda
+201e184329558c5fc00e2bce024f9de3 *data/simdata.1.rda
+0d9ac0868afee38db7219c534e9b4894 *data/simdata.2.rda
+303723d1461ab4484262d8fd9d67261e *man/MetaHD.Rd
+e0bd0f185e3f61db0818751008203dda *man/realdata.Rd
+95d1e219b605c3a85832b9270437f19c *man/simdata.1.Rd
+cf26111960c072aa24de6fe443f49d43 *man/simdata.2.Rd
+55fb0740b57fe2d1a95fd95ee0753363 *src/Makevars
+55fb0740b57fe2d1a95fd95ee0753363 *src/Makevars.win
+22659ecbffacc74f0f2df9c6c33a2b42 *src/RcppExports.cpp
+4b6640e0826b9b1631defa06eab13e81 *src/cpp_XtVX.cpp
