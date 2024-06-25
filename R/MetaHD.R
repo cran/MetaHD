@@ -3,13 +3,25 @@
 #' The MetaHD function performs a multivariate meta-analysis for combining summary estimates obtained from multiple metabolomic studies by using restricted maximum likelihood estimation.
 #' Assuming a meta-analysis is based on N outcomes/metabolites and K studies:
 #'
+#' @usage MetaHD(
+#'   Y, Slist,
+#'   Psi = NULL,
+#'   method = c("reml", "fixed"),
+#'   bscov = c("unstructured", "diag"),
+#'   rigls.maxiter = 1,
+#'   est.wscor = FALSE,
+#'   shrinkCor = TRUE,
+#'   impute.na = FALSE,
+#'   impute.var = 10^4
+#' )
 #' @param Y : treatment effect sizes of the outcomes. This should be in the form of a K x N matrix
-#' @param Slist : K-dimensional list of N x N matrices representing within-study variances and covariances of the treatment effects
+#' @param Slist : K-dimensional list of N x N matrices representing within-study variances and covariances of the treatment effects. If within-study correlations are not available, input associated variances of treatment effects in the form of a K x N matrix and set est.wscor = TRUE.
 #' @param Psi : N x N matrix representing between-study variances and covariances of the treatment effects. (optional, if not specified this will be estimated internally by "MetaHD" using "estimateBSvar" and "estimateCorMat" functions in "MetaHD" package
-#' @param shrinkCor : a logical value indicating whether a shrinkage estimator should be used to estimate between-study correlation matrix. Default is TRUE
 #' @param method : estimation method: "fixed" for fixed-effects models,"reml" for random-effects models fitted through restricted maximum likelihood
 #' @param bscov : a character vector defining the structure of the random-effects covariance matrix. Among available covariance structures, the user can select "unstructured" to obtain between-study covariance matrix with diagonal elements (variances) estimated using restricted maximul likelihood and off-diagonal elements (co-variances) reflecting the correlations estimated via shrinkage and "diag" (diagonal) for between-study variances as diagonal elements and zero co-variances
 #' @param rigls.maxiter : maximum number of iterations of the restricted iterative generalized least square algorithm. Default is set to 1
+#' @param est.wscor : a logical value indicating whether the within-study correlation matrix needs to be estimated or not. Default is FALSE
+#' @param shrinkCor : a logical value indicating whether a shrinkage estimator should be used to estimate within- or between-study correlation matrix. Default is TRUE
 #' @param impute.na : a logical value indicating whether missing values need to be imputed or not. Default is FALSE
 #' @param impute.var : multiplier for replacing the missing variances in Slist.(a large value, default is 10^4)
 
@@ -19,11 +31,18 @@
 #' @name MetaHD
 #' @useDynLib MetaHD, .registration = TRUE
 #' @importFrom Rcpp sourceCpp
+#' @importFrom matrixcalc is.positive.definite
+#' @importFrom Matrix nearPD
+#' @importFrom stats na.omit cor optim pnorm
+#' @importFrom corpcor cor.shrink
+#' @importFrom dplyr %>% group_by summarise across everything arrange desc all_of
+#' @importFrom metafor escalc
+#' @importFrom tidyr gather
 NULL
 
-Rcpp::sourceCpp("src/cpp_XtVX.cpp")
+sourceCpp("src/cpp_XtVX.cpp")
 
-MetaHD <- function(Y,Slist,Psi = NULL,shrinkCor = TRUE,method = c("reml","fixed"),bscov = c("unstructured","diag"),rigls.maxiter = 1,impute.na = FALSE,impute.var = 10^4){
+MetaHD <- function(Y,Slist,Psi = NULL,method = c("reml","fixed"),bscov = c("unstructured","diag"),rigls.maxiter = 1,est.wscor = FALSE,shrinkCor = TRUE,impute.na = FALSE,impute.var = 10^4){
   y <- Y
   if (!is.matrix(y)){
     y <- as.matrix(y)
@@ -35,13 +54,32 @@ MetaHD <- function(Y,Slist,Psi = NULL,shrinkCor = TRUE,method = c("reml","fixed"
   q <- p <- 1
   method <- match.arg(method)
   bscov <- match.arg(bscov)
+  if(est.wscor){
+    if(!is.list(Slist)){
+      WSVar <- Slist
+      WSVar <- as.matrix(WSVar)
+      nrows <- nrow(WSVar)
+      ncols <- ncol(WSVar)
+      if(nrows!=K && ncols!=N){
+        stop("Dimensions of within-study varaince matrix and Y are not consistent")
+      }
+      wscormat <- estimateCorMat(y,shrinkCor,impute.na)
+      Slist <- list()
+      for (k in 1:K) {
+        Slist[[k]] <- getCovMat(sqrt(WSVar[k,]),wscormat)
+      }
+    }else{
+      stop("Require within-study variances to be in the form of a K x N matrix, where K is the number of studies and N is the number of outcomes")
+    }
+
+  }
   if(impute.na){
     data <- low.weight(y,Slist,impute.var)
     y <- data$effects
     Slist <- data$wscovar
     for (k in 1:K) {
-      if (!matrixcalc::is.positive.definite(Slist[[k]])) {
-        Slist[[k]] <- as.matrix(Matrix::nearPD(Slist[[k]],keepDiag = TRUE,maxit = 500)$mat)
+      if (!is.positive.definite(Slist[[k]])) {
+        Slist[[k]] <- as.matrix(nearPD(Slist[[k]],keepDiag = TRUE,maxit = 500)$mat)
       }
     }
     nay[nay] <-FALSE
@@ -70,15 +108,7 @@ MetaHD <- function(Y,Slist,Psi = NULL,shrinkCor = TRUE,method = c("reml","fixed"
     if (method == "reml"){
       psi_var <- estimateBSVar(Psi, Xlist, Zlist = NULL, ylist, Slist, nalist, rep, N, q, nall,rigls.maxiter)
       if(bscov == "unstructured"){
-        if(impute.na){
-          y.imp <- Y
-          for (i in 1:N){
-            y.imp[,i][is.na(Y[,i])] <- mean(stats::na.omit(Y[,i]))
-          }
-        }else{
-          y.imp <- y
-        }
-        cormat <- estimateCorMat(y.imp,shrinkCor)
+        cormat <- estimateCorMat(y,shrinkCor,impute.na)
         psi <- getCovMat(sqrt(psi_var),cormat)
       }else if(bscov == "diag"){
         psi <- diag(psi_var, nrow = N , ncol = N)
@@ -100,27 +130,101 @@ MetaHD <- function(Y,Slist,Psi = NULL,shrinkCor = TRUE,method = c("reml","fixed"
   estimate <- as.numeric(t(solve(A)%*%B))
   std.err <- sqrt(diag(solve(A)))
   zval <- estimate/std.err
-  pvalue <- 2 * (1 - stats::pnorm(abs(zval)))
+  pvalue <- 2 * (1 - pnorm(abs(zval)))
   return(list(estimate = estimate,
               std.err = std.err,
               pVal = pvalue,
               I2.stat = I2))
 }
 
-estimateCorMat <- function(Y,shrinkCor = TRUE){
+#' @export MetaHDInput
+#'
+MetaHDInput <- function(data){
+  data <- as.data.frame(data)
+  if (!is.factor(data[, 1]) || !is.factor(data[, 2])) {
+    stop("Require study and group names as factors in the first and second columns respectively.")
+  }
+  if(length(unique(data[,1])) < 2){
+    stop("Require at least two studies to prepare input data for the meta-analysis.\nEnsure that the first column contains the study names, the second column contains the groups.")
+  }
+  if(length(unique(data[,2]))!=2){
+    stop("Restrict to two groups only.\nEnsure that the first column contains the study names, the second column contains the groups.")
+  }
+  names(data)[1:2] <- c("study", "group")
+  study <- unique(data$study)
+  group <- unique(data$group)
+  sum_data <- data %>% group_by(study, group) %>%
+              summarise(across(everything(), list(Mean = ~mean(.), Sd = ~sd(.), N = ~length(.)), .names = "{fn}_{col}"),.groups = "drop") %>%
+              arrange(desc(group))
+  stat_data <- as.data.frame(sum_data[-c(1,2)])
+  N <- (ncol(stat_data))/3
+  K <- length(study)
+  var_names <- names(data[-c(1,2)])
+  meta.data <- list()
+  for (i in 1:N) {
+    mean_col <- (i - 1) * 3 + 1
+    sd_col <- mean_col + 1
+    n_col <- mean_col + 2
+    meta.data[[i]] <- escalc(measure = "ROM",
+                             m1i = stat_data[1:K, mean_col],
+                             m2i = stat_data[(K+1):(2*K), mean_col],
+                             n1i = stat_data[1:K, n_col],
+                             n2i = stat_data[(K+1):(2*K), n_col],
+                             sd1i = stat_data[1:K, sd_col],
+                             sd2i = stat_data[(K+1):(2*K), sd_col],
+                             append = FALSE)
+  }
+  effects <- list()
+  variances <- list()
+  for (i in 1:N) {
+    effects[[i]] <- meta.data[[i]][1]
+    variances[[i]] <- meta.data[[i]][2]
+  }
+  Effects <- as.data.frame(effects)
+  Variances <- as.data.frame(variances)
+  colnames(Effects) <- var_names
+  rownames(Effects) <- study
+  colnames(Variances) <- var_names
+  rownames(Variances) <- study
+  var_df <- data.frame(Variances, study=study)
+  var_df_long <- gather(var_df, key = "metabolite", value = "var_est", all_of(var_names), factor_key=TRUE)
+  sd_split <- split(sqrt(var_df_long$var_est),var_df_long$study)
+  Sk <- list()
+  wscormat.shrink <- list()
+  split_data <- split(data,data$study)
+  for (k in 1:K) {
+    wscormat.shrink[[k]] <- estimateCorMat(log(split_data[[k]][,3:(N+2)]))
+    Sk[[k]] <- getCovMat(sd_split[[k]],wscormat.shrink[[k]])
+    rownames(Sk[[k]]) <- colnames(Sk[[k]]) <- var_names
+    if (!is.positive.definite(Sk[[k]])) {
+      Sk[[k]] <- as.matrix(nearPD(Sk[[k]],keepDiag = TRUE)$mat)
+    }
+  }
+  return(list(Y = as.matrix(Effects),
+              Slist = Sk))
+}
+
+estimateCorMat <- function(Y,shrinkCor = TRUE,impute.na = FALSE){
   N <- ncol(Y)
   K <- nrow(Y)
+  if(impute.na){
+    for (i in 1:N){
+      Y[,i][is.na(Y[,i])] <- mean(na.omit(Y[,i]))
+    }
+  }else{
+    Y <- Y
+  }
   if (K <= 2){
     cormat <- 0
   }else {
     if (N > K){
       if(shrinkCor){
-        cormat <- corpcor::cor.shrink(Y,verbose = FALSE)[1:N,1:N]
+        cormat <- cor.shrink(Y,verbose = FALSE)[1:N,1:N]
       }else{
-        cormat <- stats::cor(Y)
+        cormat <- cor(Y)
       }
     }else{
-      cormat <- stats::cor(Y)
+      cormat <- cor(Y)
     }
   }
   return(cormat)
@@ -204,7 +308,7 @@ reml.newton <- function (Psi, Xlist, Zlist, ylist, Slist, nalist, rep, N, q, nal
   par <- log(diag(Psi))
   fn <- reml.loglik.fn
   gr <- NULL
-  opt <- stats::optim(par = par, fn = fn, gr = gr, Xlist = Xlist,
+  opt <- optim(par = par, fn = fn, gr = gr, Xlist = Xlist,
                Zlist = Zlist, ylist = ylist, Slist = Slist, nalist = nalist,
                rep = rep, N = N, q = q, nall = nall, const = const, method = "BFGS",
                control = list(fnscale=-1, maxit=100, reltol=sqrt(.Machine$double.eps)), hessian = FALSE)
