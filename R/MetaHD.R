@@ -150,17 +150,23 @@ MetaHDInput <- function(data){
   if(length(unique(data[,2]))!=2){
     stop("Restrict to two groups only.\nEnsure that the first column contains the study names, the second column contains the groups.")
   }
+  if (any(is.na(data[,-c(1,2)]))) {
+    stop("The dataset contains missing values. MetaHDInput requires a complete data matrix.")
+  }
   names(data)[1:2] <- c("study", "group")
-  study <- unique(data$study)
   group <- unique(data$group)
+  N <- ncol(data[-c(1,2)])
+  K <- length(unique(data[,1]))
+  var_names <- names(data[-c(1,2)])
+  split_data <- split(data,data$study)
   sum_data <- data %>% group_by(study, group) %>%
               summarise(across(everything(), list(Mean = ~mean(.), Sd = ~sd(.), N = ~length(.)), .names = "{fn}_{col}"),.groups = "drop") %>%
               arrange(desc(group))
   stat_data <- as.data.frame(sum_data[-c(1,2)])
-  N <- (ncol(stat_data))/3
-  K <- length(study)
-  var_names <- names(data[-c(1,2)])
+  study <- unique(sum_data$study)
   meta.data <- list()
+  effects <- list()
+  variances <- list()
   for (i in 1:N) {
     mean_col <- (i - 1) * 3 + 1
     sd_col <- mean_col + 1
@@ -173,10 +179,6 @@ MetaHDInput <- function(data){
                              sd1i = stat_data[1:K, sd_col],
                              sd2i = stat_data[(K+1):(2*K), sd_col],
                              append = FALSE)
-  }
-  effects <- list()
-  variances <- list()
-  for (i in 1:N) {
     effects[[i]] <- meta.data[[i]][1]
     variances[[i]] <- meta.data[[i]][2]
   }
@@ -186,12 +188,12 @@ MetaHDInput <- function(data){
   rownames(Effects) <- study
   colnames(Variances) <- var_names
   rownames(Variances) <- study
-  var_df <- data.frame(Variances, study=study)
-  var_df_long <- gather(var_df, key = "metabolite", value = "var_est", all_of(var_names), factor_key=TRUE)
+  var_df <- Variances
+  var_df$study <- study
+  var_df_long <- gather(var_df, key = "outcome", value = "var_est", all_of(var_names), factor_key=TRUE)
   sd_split <- split(sqrt(var_df_long$var_est),var_df_long$study)
   Sk <- list()
   wscormat.shrink <- list()
-  split_data <- split(data,data$study)
   for (k in 1:K) {
     wscormat.shrink[[k]] <- estimateCorMat(log(split_data[[k]][,3:(N+2)]))
     Sk[[k]] <- getCovMat(sd_split[[k]],wscormat.shrink[[k]])

@@ -1,7 +1,7 @@
 Package: MetaHD
 Type: Package
 Title: A Multivariate Meta-Analysis Model for Metabolomics Data
-Version: 0.1.1
+Version: 0.1.2
 Authors@R: c(
   person("Jayamini","Liyanage",role=c("aut","cre"),email="j.liyanage@latrobe.edu.au"),
   person("Alysha","De Livera",role="aut",email="a.delivera@latrobe.edu.au"))
@@ -13,11 +13,11 @@ License: GPL-3
 Encoding: UTF-8
 Depends: R (>= 3.5.0)
 LazyData: true
-RoxygenNote: 7.3.1
+RoxygenNote: 7.3.2
 Imports: dplyr, tidyr, metafor, corpcor, Matrix, matrixcalc, Rcpp (>=
         1.0.0)
 LinkingTo: Rcpp, RcppArmadillo
 NeedsCompilation: yes
-Packaged: 2024-06-25 04:54:17 UTC; 21460438
+Packaged: 2024-07-22 02:55:49 UTC; 21460438
 Repository: CRAN
-Date/Publication: 2024-06-25 07:10:02 UTC
+Date/Publication: 2024-07-22 03:10:02 UTC
