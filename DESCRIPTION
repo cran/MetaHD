@@ -1,7 +1,7 @@
 Package: MetaHD
 Type: Package
 Title: A Multivariate Meta-Analysis Model for High-Dimensional Data
-Version: 0.1.5
+Version: 0.1.6
 Authors@R: c(
   person("Jayamini", "Liyanage", role = c("aut", "cre"),
          email = "j.liyanage@latrobe.edu.au"),
@@ -38,10 +38,10 @@ Imports: dplyr, tidyr, metafor, corpcor, nloptr, Matrix, matrixcalc,
         metapro, metap, UpSetR, pROC, graphics, grDevices, tools,
         ComplexHeatmap, circlize
 LinkingTo: Rcpp, RcppArmadillo
-Suggests: gVenn, BiocManager, testthat (>= 3.0.0)
+Suggests: gVenn, testthat (>= 3.0.0)
 biocViews:
 Config/roxygen2/version: 8.0.0
 NeedsCompilation: yes
-Packaged: 2026-07-08 04:47:54 UTC; 21460438
+Packaged: 2026-07-09 00:55:12 UTC; 21460438
 Repository: CRAN
-Date/Publication: 2026-07-08 09:00:26 UTC
+Date/Publication: 2026-07-09 12:30:02 UTC

@@ -1,4 +1,4 @@
-03765733153a94392ce48593758d9746 *DESCRIPTION
+dd1bf5177fc339dc3b46cd14de300ade *DESCRIPTION
 13ad5c8bbbc27f4fdf6f20fba2dca2fd *NAMESPACE
 bd14ab0224b2791ef45f2be326be50f9 *R/MetaHD.R
 a37f6814f95cff21e2fc4068607a56c3 *R/MetaHDInput.R
@@ -6,7 +6,7 @@ a37f6814f95cff21e2fc4068607a56c3 *R/MetaHDInput.R
 e108030331d9297bbedf7dc66627e461 *R/MetaHDpval.R
 f6d666936b08286089aff095503e8237 *R/RcppExports.R
 065b4c2536539cebfd832a3b18c803bc *R/helper.functions.R
-9fbef2755764e749ca849eea9eb9e2fa *R/plot_MetaHDResult.R
+6424fabf0e6e3b5eb979d1a66dbc0acb *R/plot_MetaHDResult.R
 c76a15f594b9ec5db9f0234a2e032556 *R/plot_correlation_heatmap.R
 352edc0651a03e0c6040574e600a6453 *R/plot_dendrogram.R
 2f42f0440582ae8290df98f3296b29f1 *R/plot_effect_heatmap.R
@@ -24,7 +24,7 @@ f74e9788a4c8bb06877d737de867bd62 *man/MetaHDResult.Rd
 448cd1a4df37a654698854cc691821ee *man/MetaHDpval.Rd
 c45a77ef026d9325f2dc79aebb49868e *man/estimateCorMat.Rd
 01b554abc1ca82e26c65547df1b0a1ec *man/figures/logo.png
-3686c9dd23f1194c67aeac2b4a6dd660 *man/plot.MetaHDResult.Rd
+785d203edb22eadd3ac33b25b49478fa *man/plot.MetaHDResult.Rd
 5290b64a3c5ca536bb6e773dc87113a0 *man/plot_correlation_heatmap.Rd
 7ac06601c8433a5d3ffaa209f893edf4 *man/plot_dendrogram.Rd
 cb141350189ea0929dee30185cce7962 *man/plot_effect_heatmap.Rd
